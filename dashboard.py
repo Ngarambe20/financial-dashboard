@@ -11,10 +11,27 @@ st.markdown("""
     /* Main background */
     .stApp { background-color: #2b2f42; color: white; }
 
-    /* Tab styling: Make text white and active tab distinct */
+    /* TAB STYLING FIX */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; background-color: #1e2233; padding: 10px; border-radius: 5px; }
-    .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; color: #a0aabf !important; font-weight: 500; border-radius: 4px; padding: 10px 20px; }
-    .stTabs [aria-selected="true"] { background-color: #3b415a !important; color: white !important; font-weight: bold; border-bottom: 3px solid #ff4b4b !important; }
+
+    /* Make ALL tab text white by default */
+    .stTabs [data-baseweb="tab"] { 
+        height: 50px; 
+        white-space: pre-wrap; 
+        background-color: transparent; 
+        color: white !important; /* Forces text to be white */
+        font-weight: 500; 
+        border-radius: 4px; 
+        padding: 10px 20px; 
+    }
+
+    /* Make the ACTIVE tab stand out */
+    .stTabs [aria-selected="true"] { 
+        background-color: #3b415a !important; 
+        color: white !important; 
+        font-weight: bold; 
+        border-bottom: 3px solid #ff4b4b !important; 
+    }
 
     /* Dropdown styling */
     .stSelectbox div[data-baseweb="select"] > div { background-color: white; color: black; }
@@ -77,7 +94,6 @@ with tab1:
     df = get_data(ticker)
 
     # --- MAIN LAYOUT ---
-    # We use a 3:5:3 column ratio to give the chart enough room without overlapping
     left_col, mid_col, right_col = st.columns([3, 5, 3])
 
     with left_col:
@@ -109,12 +125,10 @@ with tab1:
             fig.add_trace(go.Scatter(x=df_filtered['Date'].astype(str).tolist(), y=df_filtered['Close'].tolist(), line=dict(color='#00ff00', width=2)))
             fig.update_layout(
                 paper_bgcolor='#1e2233', plot_bgcolor='#3b415a',
-                # Fixed margins to prevent overflow
                 margin=dict(l=10, r=10, t=20, b=10), height=350,
                 xaxis=dict(showgrid=False), 
                 yaxis=dict(showgrid=True, gridcolor='#2b2f42', title="Price")
             )
-            # use_container_width=True is what caused the overlap. We set it to False.
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
     with right_col:
