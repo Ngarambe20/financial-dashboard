@@ -3,20 +3,16 @@ import pandas as pd
 import plotly.graph_objects as go
 import yfinance as yf
 
-# 1. Page Config
 st.set_page_config(page_title="Financial Dashboard", layout="wide")
 
-# 2. Custom CSS to match the exact styling
+# Custom CSS for styling
 st.markdown("""
     <style>
     .stApp { background-color: #2b2f42; color: white; }
-    /* Style the tabs to look like the image */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; background-color: #1e2233; padding: 10px; border-radius: 5px; }
     .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; color: white; border-radius: 4px; padding: 10px 20px; }
     .stTabs [aria-selected="true"] { background-color: #3b415a; font-weight: bold; }
-    /* Fix selectbox colors */
     .stSelectbox div[data-baseweb="select"] > div { background-color: white; color: black; }
-    /* News box styling */
     .news-box { background-color: #1e2233; padding: 15px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #3b415a; }
     .text-green { color: #00ff00 !important; font-weight: bold; }
     .text-red { color: #ff4b4b !important; font-weight: bold; }
@@ -25,22 +21,21 @@ st.markdown("""
 
 st.title("Financial Modeling Exploration Dashboard")
 
-# --- TABS ---
 tab1, tab2, tab3 = st.tabs(["Portfolio Performance", "Model Performance", "Jupyter Notebook"])
 
 with tab1:
-    # --- TOP CONTROLS ---
+    # Top Controls
     col1, col2, col3, col4 = st.columns([2, 2, 2, 2])
     with col1:
-        ticker = st.selectbox("Pick Ticker:", ["AAPL", "MSFT", "CSCO", "TSLA"])
+        ticker = st.selectbox("Pick Ticker:", ["AAPL", "MSFT", "CSCO", "TSLA", "NVDA"])
     with col2:
         st.selectbox("Pick a Model:", ["Random Forest Regressor 120/30"])
     with col3:
-        st.write("") # Spacer
+        st.write("") 
     with col4:
         st.markdown("<h4 style='text-align: right;'><a href='#' style='color: white; text-decoration: none;'>Dashboard Info Link</a></h4>", unsafe_allow_html=True)
 
-    # --- TIME FILTERS ---
+    # Time Filters
     st.markdown("---")
     f_col1, f_col2, f_col3 = st.columns([4, 2, 2])
     with f_col1:
@@ -53,54 +48,63 @@ with tab1:
         st.markdown("<p style='color: gray;'>Time Range:</p>", unsafe_allow_html=True)
         time_range = st.radio("Time", ["7 Days", "30 Days", "1 Year", "All"], horizontal=True, label_visibility="collapsed")
 
+    # Data fetching
+    @st.cache_data
+    def get_data(symbol):
+        try:
+            df = yf.download(symbol, start="2020-01-01", progress=False)
+            if not df.empty:
+                if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = [col[0] for col in df.columns]
+                df = df.reset_index()
+                if 'index' in df.columns:
+                    df = df.rename(columns={'index': 'Date'})
+                return df
+        except Exception:
+            pass
+        # Fallback
+        url = "https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv"
+        df = pd.read_csv(url)
+        return df.rename(columns={'Date': 'Date', 'AAPL.Close': 'Close', 'AAPL.Open': 'Open', 'AAPL.High': 'High', 'AAPL.Low': 'Low', 'AAPL.Volume': 'Volume'})
+
+    df = get_data(ticker)
+
     # --- MAIN LAYOUT ---
     left_col, mid_col, right_col = st.columns([3, 6, 3])
 
     with left_col:
-        st.markdown("<p style='color: gray;'>Current Portfolio Value</p>", unsafe_allow_html=True)
-        st.markdown("<h2 style='margin-top: -15px;'>$144.6k <span class='text-green' style='font-size: 16px;'>▲ 44.65%</span></h2>", unsafe_allow_html=True)
+        st.markdown("<p style='color: gray;'>Sample Portfolio (10 Shares)</p>", unsafe_allow_html=True)
+        if not df.empty and 'Close' in df.columns:
+            latest_price = df['Close'].iloc[-1]
+            portfolio_value = latest_price * 10
+            st.markdown(f"<h2 style='margin-top: -15px;'>${portfolio_value:,.2f} <span class='text-green' style='font-size: 16px;'>▲ Live</span></h2>", unsafe_allow_html=True)
 
-        portfolio_data = {
-            "Ticker": ["PEAK", "BAC", "GILD", "T", "KIM", "HAL"],
-            "Current Value": ["$59,214.08", "$7,416.78", "$4,595.61", "$4,338.76", "$6,508.14", "$6,307.02"],
-            "% Gain": ["<span class='text-green'>27.44%</span>", "<span class='text-green'>14.20%</span>", "<span class='text-green'>18.30%</span>", "<span class='text-red'>1.04%</span>", "<span class='text-green'>35.68%</span>", "<span class='text-red'>14.01%</span>"]
-        }
-        # Render HTML table for colored text
-        html_table = pd.DataFrame(portfolio_data).to_html(escape=False, index=False, classes='table')
-        st.markdown(f"<div style='background-color: #1e2233; color: white; padding: 10px; border-radius: 5px;'>{html_table}</div>", unsafe_allow_html=True)
+            # Make portfolio dynamic
+            portfolio_data = {
+                "Ticker": [ticker],
+                "Shares": [10],
+                "Current Value": [f"${portfolio_value:,.2f}"],
+                "% Gain": ["<span class='text-green'>+5.2% (Est)</span>"]
+            }
+            html_table = pd.DataFrame(portfolio_data).to_html(escape=False, index=False, classes='table')
+            st.markdown(f"<div style='background-color: #1e2233; color: white; padding: 10px; border-radius: 5px;'>{html_table}</div>", unsafe_allow_html=True)
 
     with mid_col:
         st.markdown(f"<h4 style='text-align: center;'>{ticker} Closing Price</h4>", unsafe_allow_html=True)
 
-        @st.cache_data
-        def get_data(symbol):
-            try:
-                df = yf.download(symbol, start="2020-01-01", progress=False)
-                if not df.empty:
-                    if isinstance(df.columns, pd.MultiIndex):
-                        df.columns = [col[0] for col in df.columns]
-                    df = df.reset_index()
-                    if 'index' in df.columns:
-                        df = df.rename(columns={'index': 'Date'})
-                    return df
-            except Exception:
-                pass
-            url = "https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv"
-            return pd.read_csv(url).rename(columns={'Date': 'Date', 'AAPL.Close': 'Close'})
-
-        df = get_data(ticker)
         if df is not None and not df.empty:
-            # Apply time filter
-            if time_range == "7 Days": df = df.tail(7)
-            elif time_range == "30 Days": df = df.tail(30)
-            elif time_range == "1 Year": df = df.tail(365)
-
-            if 'Close' not in df.columns:
-                close_cols = [c for c in df.columns if 'Close' in str(c)]
-                if close_cols: df['Close'] = df[close_cols[0]]
+            # APPLY THE TIME FILTER HERE
+            if time_range == "7 Days": 
+                df_filtered = df.tail(7)
+            elif time_range == "30 Days": 
+                df_filtered = df.tail(30)
+            elif time_range == "1 Year": 
+                df_filtered = df.tail(365)
+            else:
+                df_filtered = df
 
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=df['Date'].astype(str).tolist(), y=df['Close'].tolist(), line=dict(color='#00ff00', width=2)))
+            fig.add_trace(go.Scatter(x=df_filtered['Date'].astype(str).tolist(), y=df_filtered['Close'].tolist(), line=dict(color='#00ff00', width=2)))
             fig.update_layout(
                 paper_bgcolor='#1e2233', plot_bgcolor='#3b415a',
                 margin=dict(l=0, r=0, t=20, b=0), height=350,
@@ -110,6 +114,7 @@ with tab1:
 
     with right_col:
         st.markdown(f"<h5 style='text-align: center; background-color: #3b415a; padding: 5px; border-radius: 5px 5px 0 0;'>News for {ticker}</h5>", unsafe_allow_html=True)
+        # Dynamic News
         mock_news = [
             {"title": f"{ticker} leverages on every drop", "date": "Fri 20 Aug 2021 08:14 -0400"},
             {"title": f"{ticker} gains 1% in post-earnings action", "date": "Thu 19 Aug 2021 09:46 -0400"},
@@ -154,7 +159,6 @@ with tab1:
             title=dict(text=title, x=0.5, font=dict(size=12, color='gray')),
             xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False)
         )
-        # Highlight the selected ticker in blue
         colors = ['#2e4a8a' if t == ticker else '#6a7ca8' for t in tickers_list]
         fig.update_traces(marker_color=colors)
         return fig
@@ -165,7 +169,7 @@ with tab1:
     with c4: st.plotly_chart(create_bar_chart(ev_ebitda, "EV/EBITDA Ratio Comparison"), use_container_width=True)
 
 with tab2:
-    st.write("Model Performance metrics go here.")
+    st.write("Model Performance metrics go here (e.g., Accuracy, MAE, RMSE).")
 
 with tab3:
     st.write("Jupyter Notebook code goes here.")
