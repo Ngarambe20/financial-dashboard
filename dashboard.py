@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import yfinance as yf
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Financial Dashboard", layout="wide")
 
@@ -12,21 +13,27 @@ st.markdown("""
     .stApp { background-color: #2b2f42; color: white; }
 
     /* TAB STYLING FIX */
-    .stTabs [data-baseweb="tab-list"] { gap: 24px; background-color: #1e2233; padding: 10px; border-radius: 5px; }
+    .stTabs [data-baseweb="tab-list"] { 
+        gap: 24px; 
+        background-color: #1e2233; 
+        padding: 10px; 
+        border-radius: 5px; 
+    }
 
     /* Force ALL tab text to be white */
-    .stTabs button[data-baseweb="tab"] {
+    button[data-baseweb="tab"] {
         color: white !important;
-        font-weight: 500;
         opacity: 1 !important;
+        font-weight: 500;
+    }
+    button[data-baseweb="tab"] p {
+        color: white !important;
     }
 
     /* The selected tab highlight */
-    .stTabs button[aria-selected="true"] {
+    button[aria-selected="true"] {
         background-color: #3b415a !important;
-        color: white !important;
-        font-weight: bold;
-        border-bottom: 3px solid #00ff00 !important; /* Changed to green to match chart */
+        border-bottom: 3px solid #ff4b4b !important; 
     }
 
     /* Dropdown styling */
@@ -39,6 +46,20 @@ st.markdown("""
     .text-red { color: #ff4b4b !important; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
+
+# JavaScript Fallback: Forces tab text to be white after the page loads
+components.html("""
+    <script>
+    const observer = new MutationObserver(() => {
+        const tabs = window.parent.document.querySelectorAll('button[data-baseweb="tab"]');
+        tabs.forEach(tab => {
+            tab.style.setProperty('color', 'white', 'important');
+            tab.querySelectorAll('p').forEach(p => p.style.setProperty('color', 'white', 'important'));
+        });
+    });
+    observer.observe(window.parent.document.body, { childList: true, subtree: true });
+    </script>
+""", height=0, width=0)
 
 st.title("Financial Modeling Exploration Dashboard")
 
@@ -130,7 +151,6 @@ with tab1:
     with right_col:
         st.markdown(f"<h5 style='text-align: center; background-color: #3b415a; padding: 5px; border-radius: 5px 5px 0 0; color: white;'>News for {ticker}</h5>", unsafe_allow_html=True)
 
-        # FIXED NEWS BUG: We now build the HTML string dynamically
         news_html = ""
         mock_news = [
             {"title": f"{ticker} leverages on new market data", "date": "Fri 20 Aug 2021 08:14"},
