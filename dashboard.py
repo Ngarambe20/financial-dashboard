@@ -51,7 +51,16 @@ with mid_col:
         return df.rename(columns={'Date': 'Date', 'AAPL.Close': 'Close'})
 
     df = get_data(ticker)
+
     if not df.empty:
+        # --- THE FIX: Flatten MultiIndex columns if yfinance was used ---
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = [col[0] for col in df.columns]
+        # Ensure 'Close' is a standard column
+        if 'Close' not in df.columns:
+            close_col = [c for c in df.columns if 'Close' in str(c)][0]
+            df['Close'] = df[close_col]
+
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['Date'].astype(str).tolist(), y=df['Close'].tolist(), 
                                  line=dict(color='#00ff00', width=2)))
@@ -96,30 +105,19 @@ ps_ratios = [33.0, 15.1, 41.8, 5.5, 9.6, 8.1, 5.5, 3.3]
 ev_sales = [25.5, 12.4, 19.3, 4.3, 9.5, 8.8, 4.3, 3.1]
 ev_ebitda = [69.6, 22.3, 55.9, 13.7, 26.0, 23.4, 13.7, 6.9]
 
-# --- THE FIX: Using go.Bar instead of px.bar ---
 def create_bar_chart(x_data, title):
     fig = go.Figure(go.Bar(
-        x=x_data,
-        y=tickers_list,
-        orientation='h',
-        text=x_data,
-        textposition='outside',
-        marker=dict(color='#6a7ca8')
+        x=x_data, y=tickers_list, orientation='h', text=x_data, textposition='outside', marker=dict(color='#6a7ca8')
     ))
     fig.update_layout(
         paper_bgcolor='#2b2f42', plot_bgcolor='#2b2f42', font=dict(color='white'),
         height=300, margin=dict(l=0, r=0, t=30, b=0), showlegend=False,
         title=dict(text=title, x=0.5, font=dict(size=12)),
-        xaxis=dict(showgrid=False, showticklabels=False),
-        yaxis=dict(showgrid=False)
+        xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False)
     )
     return fig
 
-with c1:
-    st.plotly_chart(create_bar_chart(pe_ratios, "P/E Ratio"), use_container_width=True)
-with c2:
-    st.plotly_chart(create_bar_chart(ps_ratios, "P/S Ratio"), use_container_width=True)
-with c3:
-    st.plotly_chart(create_bar_chart(ev_sales, "EV/SALES Ratio"), use_container_width=True)
-with c4:
-    st.plotly_chart(create_bar_chart(ev_ebitda, "EV/EBITDA Ratio"), use_container_width=True)
+with c1: st.plotly_chart(create_bar_chart(pe_ratios, "P/E Ratio"), use_container_width=True)
+with c2: st.plotly_chart(create_bar_chart(ps_ratios, "P/S Ratio"), use_container_width=True)
+with c3: st.plotly_chart(create_bar_chart(ev_sales, "EV/SALES Ratio"), use_container_width=True)
+with c4: st.plotly_chart(create_bar_chart(ev_ebitda, "EV/EBITDA Ratio"), use_container_width=True)
