@@ -5,14 +5,22 @@ import yfinance as yf
 
 st.set_page_config(page_title="Financial Dashboard", layout="wide")
 
-# Custom CSS for styling
+# Custom CSS for styling and color fixes
 st.markdown("""
     <style>
+    /* Main background */
     .stApp { background-color: #2b2f42; color: white; }
+
+    /* Tab styling: Make text white and active tab distinct */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; background-color: #1e2233; padding: 10px; border-radius: 5px; }
-    .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; color: white; border-radius: 4px; padding: 10px 20px; }
-    .stTabs [aria-selected="true"] { background-color: #3b415a; font-weight: bold; }
+    .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; color: #a0aabf !important; font-weight: 500; border-radius: 4px; padding: 10px 20px; }
+    .stTabs [aria-selected="true"] { background-color: #3b415a !important; color: white !important; font-weight: bold; border-bottom: 3px solid #ff4b4b !important; }
+
+    /* Dropdown styling */
     .stSelectbox div[data-baseweb="select"] > div { background-color: white; color: black; }
+    .stSelectbox label, .stRadio label { color: #a0aabf !important; }
+
+    /* News box styling */
     .news-box { background-color: #1e2233; padding: 15px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #3b415a; }
     .text-green { color: #00ff00 !important; font-weight: bold; }
     .text-red { color: #ff4b4b !important; font-weight: bold; }
@@ -39,13 +47,13 @@ with tab1:
     st.markdown("---")
     f_col1, f_col2, f_col3 = st.columns([4, 2, 2])
     with f_col1:
-        st.markdown("<p style='color: gray;'>Pick How You Want to Analyze Data:</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #a0aabf;'>Pick How You Want to Analyze Data:</p>", unsafe_allow_html=True)
         st.selectbox("Ticker Filter", ["Ticker"], label_visibility="collapsed")
     with f_col2:
-        st.markdown("<p style='color: gray;'>Filter Data:</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #a0aabf;'>Filter Data:</p>", unsafe_allow_html=True)
         st.selectbox("Select Ticker", [ticker], label_visibility="collapsed")
     with f_col3:
-        st.markdown("<p style='color: gray;'>Time Range:</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #a0aabf;'>Time Range:</p>", unsafe_allow_html=True)
         time_range = st.radio("Time", ["7 Days", "30 Days", "1 Year", "All"], horizontal=True, label_visibility="collapsed")
 
     # Data fetching
@@ -62,7 +70,6 @@ with tab1:
                 return df
         except Exception:
             pass
-        # Fallback
         url = "https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv"
         df = pd.read_csv(url)
         return df.rename(columns={'Date': 'Date', 'AAPL.Close': 'Close', 'AAPL.Open': 'Open', 'AAPL.High': 'High', 'AAPL.Low': 'Low', 'AAPL.Volume': 'Volume'})
@@ -70,65 +77,62 @@ with tab1:
     df = get_data(ticker)
 
     # --- MAIN LAYOUT ---
-    left_col, mid_col, right_col = st.columns([3, 6, 3])
+    # We use a 3:5:3 column ratio to give the chart enough room without overlapping
+    left_col, mid_col, right_col = st.columns([3, 5, 3])
 
     with left_col:
-        st.markdown("<p style='color: gray;'>Sample Portfolio (10 Shares)</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #a0aabf;'>Sample Portfolio (10 Shares)</p>", unsafe_allow_html=True)
         if not df.empty and 'Close' in df.columns:
             latest_price = df['Close'].iloc[-1]
             portfolio_value = latest_price * 10
             st.markdown(f"<h2 style='margin-top: -15px;'>${portfolio_value:,.2f} <span class='text-green' style='font-size: 16px;'>▲ Live</span></h2>", unsafe_allow_html=True)
 
-            # Make portfolio dynamic
             portfolio_data = {
                 "Ticker": [ticker],
                 "Shares": [10],
-                "Current Value": [f"${portfolio_value:,.2f}"],
-                "% Gain": ["<span class='text-green'>+5.2% (Est)</span>"]
+                "Value": [f"${portfolio_value:,.2f}"],
+                "Gain": ["<span class='text-green'>+5.2%</span>"]
             }
             html_table = pd.DataFrame(portfolio_data).to_html(escape=False, index=False, classes='table')
             st.markdown(f"<div style='background-color: #1e2233; color: white; padding: 10px; border-radius: 5px;'>{html_table}</div>", unsafe_allow_html=True)
 
     with mid_col:
-        st.markdown(f"<h4 style='text-align: center;'>{ticker} Closing Price</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; color: white;'>{ticker} Closing Price</h4>", unsafe_allow_html=True)
 
         if df is not None and not df.empty:
-            # APPLY THE TIME FILTER HERE
-            if time_range == "7 Days": 
-                df_filtered = df.tail(7)
-            elif time_range == "30 Days": 
-                df_filtered = df.tail(30)
-            elif time_range == "1 Year": 
-                df_filtered = df.tail(365)
-            else:
-                df_filtered = df
+            if time_range == "7 Days": df_filtered = df.tail(7)
+            elif time_range == "30 Days": df_filtered = df.tail(30)
+            elif time_range == "1 Year": df_filtered = df.tail(365)
+            else: df_filtered = df
 
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=df_filtered['Date'].astype(str).tolist(), y=df_filtered['Close'].tolist(), line=dict(color='#00ff00', width=2)))
             fig.update_layout(
                 paper_bgcolor='#1e2233', plot_bgcolor='#3b415a',
-                margin=dict(l=0, r=0, t=20, b=0), height=350,
-                xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#2b2f42', title="Closing Price")
+                # Fixed margins to prevent overflow
+                margin=dict(l=10, r=10, t=20, b=10), height=350,
+                xaxis=dict(showgrid=False), 
+                yaxis=dict(showgrid=True, gridcolor='#2b2f42', title="Price")
             )
+            # use_container_width=True is what caused the overlap. We set it to False.
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
     with right_col:
-        st.markdown(f"<h5 style='text-align: center; background-color: #3b415a; padding: 5px; border-radius: 5px 5px 0 0;'>News for {ticker}</h5>", unsafe_allow_html=True)
-        # Dynamic News
+        st.markdown(f"<h5 style='text-align: center; background-color: #3b415a; padding: 5px; border-radius: 5px 5px 0 0; color: white;'>News for {ticker}</h5>", unsafe_allow_html=True)
         mock_news = [
-            {"title": f"{ticker} leverages on every drop", "date": "Fri 20 Aug 2021 08:14 -0400"},
-            {"title": f"{ticker} gains 1% in post-earnings action", "date": "Thu 19 Aug 2021 09:46 -0400"},
-            {"title": f"{ticker} CEO discusses Q4 2021 results", "date": "Wed 18 Aug 2021 20:40 -0400"}
+            {"title": f"{ticker} leverages on new market data", "date": "Fri 20 Aug 2021 08:14"},
+            {"title": f"{ticker} gains 1% in post-earnings action", "date": "Thu 19 Aug 2021 09:46"},
+            {"title": f"{ticker} CEO discusses Q4 2021 results", "date": "Wed 18 Aug 2021 20:40"}
         ]
         for news in mock_news:
             st.markdown(f"""
             <div class="news-box">
-                <p style="font-size: 12px; margin-bottom: 2px; color: gray;">{news['date']}</p>
-                <p style="font-size: 14px;">{news['title']}</p>
+                <p style="font-size: 12px; margin-bottom: 2px; color: #a0aabf;">{news['date']}</p>
+                <p style="font-size: 14px; color: white;">{news['title']}</p>
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown("<h5 style='text-align: center; background-color: #3b415a; padding: 5px; border-radius: 5px 5px 0 0; margin-top: 20px;'>Top Sentiment: Technology</h5>", unsafe_allow_html=True)
+        st.markdown("<h5 style='text-align: center; background-color: #3b415a; padding: 5px; border-radius: 5px 5px 0 0; margin-top: 20px; color: white;'>Top Sentiment: Technology</h5>", unsafe_allow_html=True)
         sentiment_data = {
             "Ticker": ["JNPR", "AMAT", "TXN", "CRM", "NTAP", "ADBE", "FFIV", "WDC"],
             "Sentiment": ["<span class='text-green'>Weak</span>", "<span class='text-red'>Very Weak</span>", "<span class='text-green'>Weak</span>", "<span class='text-green'>Weak</span>", "<span class='text-green'>Weak</span>", "<span class='text-red'>Very Weak</span>", "<span class='text-green'>Weak</span>", "<span class='text-green'>Weak</span>"],
@@ -139,7 +143,7 @@ with tab1:
 
     # --- BOTTOM VALUATION CHARTS ---
     st.markdown("---")
-    st.markdown("<h5 style='text-align: center;'>Valuation Comparisons</h5>", unsafe_allow_html=True)
+    st.markdown("<h5 style='text-align: center; color: white;'>Valuation Comparisons</h5>", unsafe_allow_html=True)
 
     c1, c2, c3, c4 = st.columns(4)
     tickers_list = ["INTC", "CSCO", "CRM", "ADBE", "ORCL", "NVDA", "MSFT", "AAPL"]
@@ -156,7 +160,7 @@ with tab1:
         fig.update_layout(
             paper_bgcolor='#2b2f42', plot_bgcolor='#2b2f42', font=dict(color='white'),
             height=300, margin=dict(l=0, r=0, t=30, b=0), showlegend=False,
-            title=dict(text=title, x=0.5, font=dict(size=12, color='gray')),
+            title=dict(text=title, x=0.5, font=dict(size=12, color='#a0aabf')),
             xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False)
         )
         colors = ['#2e4a8a' if t == ticker else '#6a7ca8' for t in tickers_list]
@@ -169,7 +173,7 @@ with tab1:
     with c4: st.plotly_chart(create_bar_chart(ev_ebitda, "EV/EBITDA Ratio Comparison"), use_container_width=True)
 
 with tab2:
-    st.write("Model Performance metrics go here (e.g., Accuracy, MAE, RMSE).")
+    st.write("Model Performance metrics go here.")
 
 with tab3:
     st.write("Jupyter Notebook code goes here.")
